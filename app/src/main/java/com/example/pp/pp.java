@@ -3,13 +3,9 @@ package com.example.pp;
 import android.os.AsyncTask;
 import android.os.Handler;
 import android.os.Message;
-import android.os.SystemClock;
-import android.support.annotation.UiThread;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.View;
-import android.widget.ProgressBar;
 import android.widget.TextView;
 
 public class pp extends AppCompatActivity {
@@ -19,7 +15,7 @@ public class pp extends AppCompatActivity {
     public static double[][] matr1, matr2, matr3;
     public double num;
     public long time1, time2;
-    //public int progress = 0;
+    public int potoki = 0;
     public int meth = 1;
 
     @Override
@@ -56,6 +52,13 @@ public class pp extends AppCompatActivity {
         @Override
         protected void onPostExecute(Void unused) {
             //super.onPostExecute(unused);
+            potoki++;
+            if(potoki == quanOfThreads) {
+                time2 = System.currentTimeMillis();
+                TextView textView = (TextView) findViewById(R.id.textView);
+                textView.setText(String.format("Time: %f", (time2 - time1) / 1000f));
+                vec1 = null;
+            }
         }
     }
 
@@ -88,6 +91,14 @@ public class pp extends AppCompatActivity {
         @Override
         protected void onPostExecute(Void unused) {
             //super.onPostExecute(unused);
+            potoki++;
+            if(potoki == quanOfThreads) {
+                time2 = System.currentTimeMillis();
+                TextView textView = (TextView) findViewById(R.id.textView);
+                textView.setText(String.format("Time: %f", (time2 - time1) / 1000f));
+                vec1 = null;
+                vec2 = null;
+            }
         }
     }
 
@@ -100,13 +111,14 @@ public class pp extends AppCompatActivity {
         @Override
         protected Void doInBackground(Integer... inParam) {
             int k = inParam[0];       // номер потока
-            int begin = k * (N / quanOfThreads);
-            int end = (k + 1) * (N / quanOfThreads);
+            int begin = k * (N * N / quanOfThreads);
+            int end = (k + 1) * (N * N / quanOfThreads);
             if (k + 1 == quanOfThreads){  // если поток последний, то захватываем всё что осталось
-                end = N;
+                end = N * N;
             }
             for (int j = begin; j < end; j++) {
-                vec1[j] *= Math.sin(Math.sin(num));
+                int rowNum = j / N, colNum = j % N;
+                res[rowNum] += Math.sin(Math.sin(matr1[rowNum][colNum] * vec1[colNum]));
             }
             return(null);
         }
@@ -119,6 +131,15 @@ public class pp extends AppCompatActivity {
         @Override
         protected void onPostExecute(Void unused) {
             //super.onPostExecute(unused);
+            potoki++;
+            if(potoki == quanOfThreads) {
+                time2 = System.currentTimeMillis();
+                TextView textView = (TextView) findViewById(R.id.textView);
+                textView.setText(String.format("Time: %f", (time2 - time1) / 1000f));
+                matr1 = null;
+                vec1 = null;
+                res = null;
+            }
         }
     }
 
@@ -153,6 +174,15 @@ public class pp extends AppCompatActivity {
         @Override
         protected void onPostExecute(Void unused) {
             //super.onPostExecute(unused);
+            potoki++;
+            if(potoki == quanOfThreads) {
+                time2 = System.currentTimeMillis();
+                TextView textView = (TextView) findViewById(R.id.textView);
+                textView.setText(String.format("Time: %f", (time2 - time1) / 1000f));
+                matr1 = null;
+                matr2 = null;
+                matr3 = null;
+            }
         }
     }
 
@@ -222,27 +252,19 @@ public class pp extends AppCompatActivity {
 
             TextView textView = (TextView) findViewById(R.id.textView);
             textView.setText(String.format("Time: %f", (time2 - time1) / 1000f));
+            vec1 = null;
         }
         else{
             time1 = System.currentTimeMillis();
 
-            if(quanOfThreads == 2){
-                ProgressTask progressTask = new ProgressTask();
-                progressTask.execute(1);
+            ProgressTask[] progressTasks = new ProgressTask[quanOfThreads];
+
+            potoki = 0;
+            for (int j = 0; j < quanOfThreads; j++) {
+                progressTasks[j] = new ProgressTask();
+                progressTasks[j].executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, j);
             }
-
-            // сам считает
-            for (int j = 0; j < N / quanOfThreads; j++) {
-                vec1[j] *= Math.sin(Math.sin(num));
-            }
-
-            time2 = System.currentTimeMillis();
-
-            TextView textView = (TextView) findViewById(R.id.textView);
-            textView.setText(String.format("Time: %f", (time2-time1) / 1000f));
-            SystemClock.sleep(1000);
         }
-        vec1 = null;
     }
 
     public void onButton2Click(View view)
@@ -311,29 +333,20 @@ public class pp extends AppCompatActivity {
 
             TextView textView = (TextView) findViewById(R.id.textView);
             textView.setText(String.format("Time: %f", (time2 - time1) / 1000f));
+            vec1 = null;
+            vec2 = null;
         }
         else{
             time1 = System.currentTimeMillis();
 
-            if(quanOfThreads == 2){
-                ProgressTask2 progressTask = new ProgressTask2();
-                progressTask.execute(1);
+            ProgressTask2[] progressTasks = new ProgressTask2[quanOfThreads];
+
+            potoki = 0;
+            for (int j = 0; j < quanOfThreads; j++) {
+                progressTasks[j] = new ProgressTask2();
+                progressTasks[j].executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, j);
             }
-
-            // сам считает
-            for (int j = 0; j < N / quanOfThreads; j++) {
-                double tmp = Math.sin(Math.sin(vec1[j] * vec2[j]));
-                sum[0] += tmp;
-            }
-
-            time2 = System.currentTimeMillis();
-
-            TextView textView = (TextView) findViewById(R.id.textView);
-            textView.setText(String.format("Time: %f", (time2-time1) / 1000f));
-            SystemClock.sleep(1000);
         }
-        vec1 = null;
-        vec2 = null;
     }
 
     public void onButton3Click(View view)
@@ -398,30 +411,21 @@ public class pp extends AppCompatActivity {
 
             TextView textView = (TextView) findViewById(R.id.textView);
             textView.setText(String.format("Time: %f", (time2 - time1) / 1000f));
+            matr1 = null;
+            vec1 = null;
+            res = null;
         }
         else{
             time1 = System.currentTimeMillis();
 
-            if(quanOfThreads == 2){
-                ProgressTask3 progressTask = new ProgressTask3();
-                progressTask.execute(1);
+            ProgressTask3[] progressTasks = new ProgressTask3[quanOfThreads];
+
+            potoki = 0;
+            for (int j = 0; j < quanOfThreads; j++) {
+                progressTasks[j] = new ProgressTask3();
+                progressTasks[j].executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, j);
             }
-
-            // сам считает
-            for (int j = 0; j < N*N / quanOfThreads; j++) {
-                int rowNum = j / N, colNum = j % N;
-                res[rowNum] += Math.sin(Math.sin(matr1[rowNum][colNum] * vec1[colNum]));
-            }
-
-            time2 = System.currentTimeMillis();
-
-            TextView textView = (TextView) findViewById(R.id.textView);
-            textView.setText(String.format("Time: %f", (time2-time1) / 1000f));
-            SystemClock.sleep(1000);
         }
-        matr1 = null;
-        vec1 = null;
-        res = null;
     }
 
     public void onButton4Click(View view)
@@ -488,33 +492,22 @@ public class pp extends AppCompatActivity {
 
             TextView textView = (TextView) findViewById(R.id.textView);
             textView.setText(String.format("Time: %f", (time2 - time1) / 1000f));
+            matr1 = null;
+            matr2 = null;
+            matr3 = null;
         }
         else{
             time1 = System.currentTimeMillis();
 
-            if(quanOfThreads == 2){
-                ProgressTask4 progressTask = new ProgressTask4();
-                progressTask.execute(1);
+            ProgressTask4[] progressTasks = new ProgressTask4[quanOfThreads];
+
+            potoki = 0;
+            for (int j = 0; j < quanOfThreads; j++) {
+                progressTasks[j] = new ProgressTask4();
+                progressTasks[j].executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, j);
             }
-
-            // сам считает
-            for (int j = 0; j < N*N / quanOfThreads; j++) {
-                int rowNum = j / N, colNum = j % N;
-                for (int m = 0; m < N; ++m) {
-                    matr3[rowNum][colNum] += matr1[rowNum][m] * matr2[m][colNum];
-                }
-            }
-
-            time2 = System.currentTimeMillis();
-
-            TextView textView = (TextView) findViewById(R.id.textView);
-            textView.setText(String.format("Time: %f", (time2-time1) / 1000f));
-            SystemClock.sleep(1000);
         }
-        matr1 = null;
-        matr2 = null;
-        matr3 = null;
-        // System.gc();
+        // System.gc();  принудительно вызвать сборщик мусора
     }
 
     public void onRb1Click(View view) {
